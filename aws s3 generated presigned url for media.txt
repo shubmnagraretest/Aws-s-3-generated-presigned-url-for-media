@@ -1,0 +1,63 @@
+  // Method to take s3 object link and give generated presigned url to view/download the data
+  public static String generatePresignedURL(String objectKey) throws IOException {
+
+    logger.trace("Entering generatePresignedURL");
+
+    String generatedUrl = new String();
+
+    String bucketName = ConfigUtility.getProperty(Constants.AWS_S3_BUCKETNAME);
+    try {
+
+      AWSCredentials credentials =
+          new BasicAWSCredentials(ConfigUtility.getProperty(Constants.AWS_S3_ACCESSKEY),
+              ConfigUtility.getProperty(Constants.AWS_S3_SECRETKEY));
+      AmazonS3 s3Client = AmazonS3ClientBuilder.standard()
+          .withCredentials(new AWSStaticCredentialsProvider(credentials))
+          .withRegion(Regions.AP_SOUTH_1).build();
+
+      // Set the presigned URL to expire after 10 minutes.
+      java.util.Date expiration = new java.util.Date();
+      long expTimeMillis = expiration.getTime();
+
+
+      expTimeMillis += 1000 * 60 * Integer
+          .parseInt(ConfigUtility.getProperty(Constants.CONFIG_VERIFICATION_MEDIA_LINK_VALIDITY)); // 10
+      expiration.setTime(expTimeMillis);
+      // Generate the presigned URL.
+      logger.debug("Generating pre-signed URL.");
+      GeneratePresignedUrlRequest generatePresignedUrlRequest =
+          new GeneratePresignedUrlRequest(bucketName, objectKey).withMethod(HttpMethod.GET)
+              .withExpiration(expiration);
+      URL url = s3Client.generatePresignedUrl(generatePresignedUrlRequest);
+      logger.debug("Pre-Signed URL: " + url.toString());
+      generatedUrl = url.toString();
+      /*
+       * sample signature:
+       * https://com-example-bucket.s3.amazonaws.com/path/to/file.img?X-Amz-Security-Token=
+       * FQoDYXdzEDcaDLjUOdj2hDTZvWUQaiK3AxulqM%2BOPlp%2Bnq71P0LyuI0vj8tT%
+       * 2F9i24Wd3jY8dUbudWbhUH9IAsPnl7asujO90GlaFP4dXujDDLwIakMjCJSfOFM4IoGJz8XtcjXkqJCNaenbrTA%
+       * 2F3PfSl%2Fe9wQwJlY8gOu8%
+       * 2Byioq2ElHULMKv52nEZj8s3v4dD0pGHQTYc4hGV7ty9CYwXNgz6w3TREhxuFdAewNgTRnY1uFNy7on6NDF5IE15vlJ2PxqrX53ZMLKP
+       * %2FdU8i5BcpZ3ySVhNpBpU3GJAPMOh%2B2ztCAk1zPjW4G0N5n9BlnjTMGs3vGBb9IW%2F8dzAoxaG9U9%2B%
+       * 2FCp8euJN562dYYSZ9wmQgsfOVqc5OksdnHVkPJW400ObOcKmc9mqIRyqA%2B3Mv4z0%
+       * 2Fx6iLYRJ3UaloFSGbmR6VlIxMl%2F67aHrmCnBE23a1%2BNMWgzLx%2FogqZy3CD%2F%
+       * 2Fs6Jt1qkxUrRwC0RPK93LHD74qm8rjqZcEKFrBOrZsYtcl3zKgRIEHCbatQ7dwT634sdF0MwaD0vwTsbsStZDW903k5C
+       * %2FDuz4rEmkPv6c5CmFvxp4xOkUtMbDk4B8Z641CoeAMMOKICH%2FlW7%2F1as3nQo07Ow2QU%3D&X-Amz-
+       * Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20180621T214222Z&X-Amz-SignedHeaders=host&X-Amz-
+       * Expires=3000&X-Amz-Credential=<access_key>%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Signature=
+       * <signature>
+       */
+    } catch (AmazonServiceException e) {
+      // The call was transmitted successfully, but Amazon S3 couldn't process
+      // it, so it returned an error response.
+      e.printStackTrace();
+    } catch (SdkClientException e) {
+      // Amazon S3 couldn't be contacted for a response, or the client
+      // couldn't parse the response from Amazon S3.
+      e.printStackTrace();
+    }
+
+    logger.trace("Exiting generatePresignedURL");
+    return generatedUrl;
+  }
+  
